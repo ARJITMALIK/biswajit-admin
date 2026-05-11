@@ -53,6 +53,7 @@ import YouthInternshipFormPage from './pages/youth/YouthInternshipFormPage';
 import YouthInternshipDetailsPage from './pages/youth/YouthInternshipDetailsPage';
 import SocialEngagementPage from './pages/social/SocialEngagementPage';
 import SocialAnalyticsDashboard from './pages/social/SocialAnalyticsDashboard';
+import ReportsPage from './pages/reports/ReportsPage';
 
 export default function App() {
     return (
@@ -133,6 +134,7 @@ export default function App() {
                         {/* Social Engagement */}
                         <Route path="social" element={<SocialEngagementPage />} />
                         <Route path="social/analytics/:platformId" element={<SocialAnalyticsDashboard />} />
+                        <Route path="reports" element={<ReportsPage />} />
                         {/* Settings */}
                         <Route path="settings" element={<SettingsPage />} />
                     </Route>

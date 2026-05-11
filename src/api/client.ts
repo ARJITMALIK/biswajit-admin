@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// export const BASE_URL = 'http://localhost:5008/';
+// export const BASE_URL = 'http://localhost:5008';
 export const BASE_URL = 'https://backend.biswajitdaimary.in/';
 
 const apiClient = axios.create({
@@ -26,7 +26,11 @@ apiClient.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem('admin_token');
             localStorage.removeItem('admin_user');
-            window.location.href = '/login';
+
+            // Only redirect if we're not already on the login page to avoid loops/reloads
+            if (!window.location.pathname.includes('/login')) {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }

@@ -13,6 +13,7 @@ import {
     HiOutlineUsers,
     HiOutlineCog6Tooth,
     HiOutlineExclamationCircle,
+    HiOutlineFlag,
     HiOutlineShieldExclamation,
     HiOutlineSparkles,
     HiOutlineLightBulb,
@@ -38,6 +39,7 @@ const navItems = [
     { label: 'Fake News', icon: HiOutlineShieldExclamation, path: '/fake-news', module: 'fake_news' },
     { label: 'Green Challenges', icon: HiOutlineSparkles, path: '/green', module: 'green_challenges' },
     { label: 'Ideas', icon: HiOutlineLightBulb, path: '/ideas', module: 'ideas' },
+    { label: 'Reports', icon: HiOutlineFlag, path: '/reports', module: 'users' }, // Using 'users' module for permission fallback
     { label: 'Master Data', icon: HiOutlineCircleStack, path: '/master', module: 'master_data' },
     { label: 'Rewards', icon: HiOutlineGift, path: '/rewards', module: 'rewards' },
     { label: 'Youth Events', icon: HiOutlineCalendarDays, path: '/youth/events', module: 'youth_events' },
