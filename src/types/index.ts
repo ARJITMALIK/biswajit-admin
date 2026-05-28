@@ -501,7 +501,44 @@ export interface PoliticalParty {
     name: string;
     abbreviation: string;
     logo_url: string | null;
+    color: string | null;
+    flag_image_url: string | null;
     leaders?: PoliticalPartyLeader[];
+    created_at: string;
+    updated_at: string;
+}
+
+// ─── MLA ────────────────────────────────────────────────────────
+export interface Mla {
+    id: string;
+    name: string;
+    party_id: string;
+    image_url: string | null;
+    party_name?: string;
+    party_abbreviation?: string;
+    party_color?: string;
+    party_flag_image_url?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+// ─── Election Result ────────────────────────────────────────────
+export interface ElectionResult {
+    id: string;
+    booth_id: string;
+    mla_id: string;
+    election_year: number;
+    votes_gained: number;
+    booth_name?: string;
+    booth_no?: number;
+    constituency_name?: string;
+    latitude?: number;
+    longitude?: number;
+    mla_name?: string;
+    mla_image_url?: string;
+    party_name?: string;
+    party_abbreviation?: string;
+    party_color?: string;
     created_at: string;
     updated_at: string;
 }

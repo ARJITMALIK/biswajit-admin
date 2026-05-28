@@ -23,6 +23,7 @@ import {
     HiOutlineIdentification,
     HiOutlineUserGroup,
     HiOutlineGlobeAlt,
+    HiOutlineTrophy,
 } from 'react-icons/hi2';
 
 const navItems = [
@@ -45,6 +46,7 @@ const navItems = [
     { label: 'Youth Events', icon: HiOutlineCalendarDays, path: '/youth/events', module: 'youth_events' },
     { label: 'Youth Interns', icon: HiOutlineBriefcase, path: '/youth/internships', module: 'youth_internships' },
     { label: 'Social Metrics', icon: HiOutlineGlobeAlt, path: '/social', module: 'rewards' },
+    { label: 'Results', icon: HiOutlineTrophy, path: '/results', module: 'users' },
     { label: 'Users', icon: HiOutlineUsers, path: '/users', module: 'users' },
     { label: 'Roles', icon: HiOutlineIdentification, path: '/roles', module: 'roles' },
     { label: 'Employees', icon: HiOutlineUserGroup, path: '/employees', module: 'employees' },

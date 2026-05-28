@@ -6,6 +6,7 @@ import { Booth, Constituency, PoliticalParty, District, PoliticalPartyLeader } f
 import LoadingSkeleton from '../../components/ui/LoadingSkeleton';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import FileUpload from '../../components/ui/FileUpload';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 import toast from 'react-hot-toast';
 
 export default function MasterDataPage() {
@@ -193,55 +194,81 @@ export default function MasterDataPage() {
     };
 
     const renderTabs = () => (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div className="flex bg-slate-100 p-1 rounded-2xl w-fit overflow-x-auto no-scrollbar max-w-full">
-                <button
-                    onClick={() => { setActiveTab('districts'); setSelectedParty(null); setSearch(''); setPage(1); setFilterDistrictId(''); setFilterConstituencyId(''); }}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'districts' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                    <HiOutlineMapPin className="w-4 h-4" /> Districts
-                </button>
-                <button
-                    onClick={() => { setActiveTab('constituencies'); setSelectedParty(null); setSearch(''); setPage(1); setFilterDistrictId(''); setFilterConstituencyId(''); }}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'constituencies' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                    <HiOutlineBuildingLibrary className="w-4 h-4" /> Constituencies
-                </button>
-                <button
-                    onClick={() => { setActiveTab('booths'); setSelectedParty(null); setSearch(''); setPage(1); setFilterDistrictId(''); setFilterConstituencyId(''); }}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'booths' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                    <HiOutlineMap className="w-4 h-4" /> Booths
-                </button>
-                <button
-                    onClick={() => { setActiveTab('parties'); setSelectedParty(null); setSearch(''); setPage(1); setFilterDistrictId(''); setFilterConstituencyId(''); }}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'parties' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                    <HiOutlineFlag className="w-4 h-4" /> Political Parties
-                </button>
+        <div className="flex flex-col gap-4 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex bg-slate-100/80 p-1.5 rounded-2xl w-fit overflow-x-auto no-scrollbar max-w-full border border-slate-200/60 shadow-sm">
+                    <button
+                        onClick={() => { setActiveTab('districts'); setSelectedParty(null); setSearch(''); setPage(1); setFilterDistrictId(''); setFilterConstituencyId(''); }}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'districts' ? 'bg-white text-brand-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                    >
+                        <HiOutlineMapPin className="w-4 h-4" /> Districts
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab('constituencies'); setSelectedParty(null); setSearch(''); setPage(1); setFilterDistrictId(''); setFilterConstituencyId(''); }}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'constituencies' ? 'bg-white text-brand-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                    >
+                        <HiOutlineBuildingLibrary className="w-4 h-4" /> Constituencies
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab('booths'); setSelectedParty(null); setSearch(''); setPage(1); setFilterDistrictId(''); setFilterConstituencyId(''); }}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'booths' ? 'bg-white text-brand-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                    >
+                        <HiOutlineMap className="w-4 h-4" /> Booths
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab('parties'); setSelectedParty(null); setSearch(''); setPage(1); setFilterDistrictId(''); setFilterConstituencyId(''); }}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'parties' ? 'bg-white text-brand-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                    >
+                        <HiOutlineFlag className="w-4 h-4" /> Political Parties
+                    </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                    {activeTab === 'booths' && (
+                        <>
+                            <input
+                                type="file"
+                                id="bulk-booth-upload"
+                                className="hidden"
+                                accept=".csv"
+                                onChange={handleBulkUpload}
+                            />
+                            <button
+                                onClick={() => document.getElementById('bulk-booth-upload')?.click()}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 text-sm font-bold hover:bg-amber-100 transition-all shadow-sm active:scale-95"
+                            >
+                                Bulk Import
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200/60 shadow-sm">
                 {/* Global Search */}
-                <div className="relative">
-                    <HiMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <div className="relative flex-1 min-w-[200px]">
+                    <HiMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                     <input 
                         type="text" 
                         placeholder={`Search ${activeTab}...`} 
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-slate-200 focus:border-brand-500 outline-none text-sm font-bold w-full md:w-64 transition-all shadow-sm"
+                        className="pl-11 pr-4 py-2.5 w-full rounded-xl bg-transparent border-none focus:ring-0 outline-none text-sm font-medium transition-all placeholder:text-slate-400"
                     />
                 </div>
 
                 {/* Filters */}
                 {(activeTab === 'constituencies' || activeTab === 'booths') && (
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                    <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
+                )}
+                
+                {(activeTab === 'constituencies' || activeTab === 'booths') && (
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors">
                         <HiOutlineFunnel className="w-4 h-4 text-slate-400" />
                         <select 
                             value={filterDistrictId} 
                             onChange={(e) => { setFilterDistrictId(e.target.value); setFilterConstituencyId(''); }}
-                            className="text-xs font-black uppercase tracking-tight outline-none cursor-pointer bg-transparent"
+                            className="text-sm font-semibold text-slate-700 outline-none cursor-pointer bg-transparent"
                         >
                             <option value="">All Districts</option>
                             {districts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -249,43 +276,18 @@ export default function MasterDataPage() {
                     </div>
                 )}
                 {activeTab === 'booths' && (
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors">
                         <HiOutlineFunnel className="w-4 h-4 text-slate-400" />
                         <select 
                             value={filterConstituencyId} 
                             onChange={(e) => setFilterConstituencyId(e.target.value)}
-                            className="text-xs font-black uppercase tracking-tight outline-none cursor-pointer bg-transparent"
+                            className="text-sm font-semibold text-slate-700 outline-none cursor-pointer bg-transparent"
                         >
                             <option value="">All LACs</option>
                             {constituencies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
                 )}
-
-                {activeTab === 'booths' && (
-                    <>
-                        <input
-                            type="file"
-                            id="bulk-booth-upload"
-                            className="hidden"
-                            accept=".csv"
-                            onChange={handleBulkUpload}
-                        />
-                        <button
-                            onClick={() => document.getElementById('bulk-booth-upload')?.click()}
-                            className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 text-sm font-black hover:bg-amber-100 transition-all shadow-sm active:scale-95"
-                        >
-                            Bulk Import
-                        </button>
-                    </>
-                )}
-
-                <button 
-                    onClick={() => openModal(activeTab === 'parties' ? 'party' : activeTab.slice(0, -1) as any)}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-2xl gradient-primary text-white text-sm font-black hover:opacity-95 transition-all shadow-lg shadow-brand-500/25 active:scale-95"
-                >
-                    <HiOutlinePlus className="w-4 h-4 stroke-[3]" /> Add {activeTab === 'parties' ? 'Party' : activeTab.slice(0, -1).toUpperCase()}
-                </button>
             </div>
         </div>
     );
@@ -542,15 +544,12 @@ export default function MasterDataPage() {
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Parent Constituency</label>
-                                            <select 
-                                                required 
-                                                value={editItem.constituency_id || ''} 
-                                                onChange={e => setEditItem({...editItem, constituency_id: e.target.value})}
-                                                className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-brand-500 focus:bg-white outline-none transition-all text-sm font-bold shadow-inner cursor-pointer"
-                                            >
-                                                <option value="">Select Parent Constituency</option>
-                                                {constituencies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
+                                            <SearchableSelect
+                                                options={constituencies.map(c => ({ id: c.id, label: c.name }))}
+                                                value={editItem.constituency_id}
+                                                onChange={(val) => setEditItem({ ...editItem, constituency_id: val })}
+                                                placeholder="Select Parent Constituency"
+                                            />
                                         </div>
                                     </>
                                 )}
