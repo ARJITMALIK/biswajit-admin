@@ -89,6 +89,11 @@ export const resultsApi = {
         return res.data;
     },
 
+    createBulkElectionResults: async (data: any) => {
+        const res = await apiClient.post('/results/election-results/bulk', data);
+        return res.data;
+    },
+
     updateElectionResult: async (id: string, data: any) => {
         const res = await apiClient.patch(`/results/election-results/${id}`, data);
         return res.data;

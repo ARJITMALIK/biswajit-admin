@@ -22,7 +22,7 @@ export default function ResultsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState<Tab>('parties');
     const [editItem, setEditItem] = useState<any>(null);
-    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [deletingId, setDeletingId] = useState<any>(null);
     const [deletingType, setDeletingType] = useState('');
     const [flagFile, setFlagFile] = useState<File | null>(null);
     const [mlaFile, setMlaFile] = useState<File | null>(null);
@@ -51,12 +51,29 @@ export default function ResultsPage() {
 
     const openModal = (type: Tab, item: any = null) => {
         setModalType(type); setFlagFile(null); setMlaFile(null);
-        if (item) { setEditItem({ ...item }); }
+        if (item) {
+            if (type === 'results') {
+                const itemResultsMap = new Map(item.results.map((r: any) => [r.mla_id, r.votes_gained]));
+                const fullResults = mlas.map(m => ({
+                    mla_id: m.id,
+                    votes_gained: itemResultsMap.get(m.id) || 0
+                }));
+                setEditItem({ ...item, results: fullResults });
+            } else {
+                setEditItem({ ...item }); 
+            }
+        }
         else {
             if (type === 'parties') setEditItem({ name: '', abbreviation: '', color: '#3B82F6', flag_image_url: '' });
             else if (type === 'mlas') setEditItem({ name: '', party_id: '', image_url: '' });
             else if (type === 'booths') setEditItem({ name: '', booth_no: 1, constituency_id: '', latitude: '', longitude: '' });
-            else setEditItem({ booth_id: '', mla_id: '', election_year: new Date().getFullYear(), votes_gained: 0 });
+            else {
+                const fullResults = mlas.map(m => ({
+                    mla_id: m.id,
+                    votes_gained: 0
+                }));
+                setEditItem({ booth_id: '', election_year: new Date().getFullYear(), results: fullResults });
+            }
         }
         setIsModalOpen(true);
     };
@@ -81,8 +98,9 @@ export default function ResultsPage() {
                 const payload = { name: editItem.name, booth_no: Number(editItem.booth_no), constituency_id: editItem.constituency_id, latitude: editItem.latitude ? parseFloat(editItem.latitude) : null, longitude: editItem.longitude ? parseFloat(editItem.longitude) : null };
                 editItem.id ? await resultsApi.updateBooth(editItem.id, payload) : await resultsApi.createBooth(payload);
             } else {
-                const payload = { booth_id: editItem.booth_id, mla_id: editItem.mla_id, election_year: Number(editItem.election_year), votes_gained: Number(editItem.votes_gained) };
-                editItem.id ? await resultsApi.updateElectionResult(editItem.id, payload) : await resultsApi.createElectionResult(payload);
+                const validResults = editItem.results.filter((r: any) => Number(r.votes_gained) > 0);
+                const payload = { booth_id: editItem.booth_id, election_year: Number(editItem.election_year), results: validResults };
+                await resultsApi.createBulkElectionResults(payload);
             }
             toast.success('Saved successfully'); setIsModalOpen(false); loadData();
         } catch (err: any) { toast.error(err?.response?.data?.message || 'Failed to save'); }
@@ -91,10 +109,13 @@ export default function ResultsPage() {
     const handleDelete = async () => {
         if (!deletingId) return;
         try {
-            if (deletingType === 'parties') await resultsApi.deleteParty(deletingId);
-            else if (deletingType === 'mlas') await resultsApi.deleteMla(deletingId);
-            else if (deletingType === 'booths') await resultsApi.deleteBooth(deletingId);
-            else await resultsApi.deleteElectionResult(deletingId);
+            if (deletingType === 'parties') await resultsApi.deleteParty(deletingId as string);
+            else if (deletingType === 'mlas') await resultsApi.deleteMla(deletingId as string);
+            else if (deletingType === 'booths') await resultsApi.deleteBooth(deletingId as string);
+            else {
+                const group = deletingId as any;
+                await Promise.all(group.results.map((mr: any) => resultsApi.deleteElectionResult(mr.id)));
+            }
             toast.success('Deleted'); loadData();
         } catch { toast.error('Failed to delete'); }
         setDeletingId(null);
@@ -114,7 +135,35 @@ export default function ResultsPage() {
         if (activeTab === 'parties') return q ? parties.filter(p => p.name.toLowerCase().includes(q) || p.abbreviation.toLowerCase().includes(q)) : parties;
         if (activeTab === 'mlas') return q ? mlas.filter(m => m.name.toLowerCase().includes(q) || (m.party_name || '').toLowerCase().includes(q)) : mlas;
         if (activeTab === 'booths') return q ? booths.filter((b: any) => b.name.toLowerCase().includes(q) || (b.constituency_name || '').toLowerCase().includes(q)) : booths;
-        return q ? results.filter(r => (r.booth_name || '').toLowerCase().includes(q) || (r.mla_name || '').toLowerCase().includes(q) || (r.party_abbreviation || '').toLowerCase().includes(q)) : results;
+        
+        const groupedMap = new Map<string, any>();
+        for (const r of results) {
+            const key = `${r.booth_id}_${r.election_year}`;
+            if (!groupedMap.has(key)) {
+                groupedMap.set(key, {
+                    id: key,
+                    booth_id: r.booth_id,
+                    booth_name: r.booth_name,
+                    booth_no: r.booth_no,
+                    constituency_name: r.constituency_name,
+                    election_year: r.election_year,
+                    results: []
+                });
+            }
+            groupedMap.get(key).results.push({
+                id: r.id,
+                mla_id: r.mla_id,
+                mla_name: r.mla_name,
+                party_abbreviation: r.party_abbreviation,
+                party_color: r.party_color,
+                votes_gained: r.votes_gained
+            });
+        }
+        const grouped = Array.from(groupedMap.values());
+        return q ? grouped.filter(g => 
+            (g.booth_name || '').toLowerCase().includes(q) || 
+            g.results.some((mr: any) => (mr.mla_name || '').toLowerCase().includes(q) || (mr.party_abbreviation || '').toLowerCase().includes(q))
+        ) : grouped;
     }, [activeTab, parties, mlas, booths, results, search]);
 
     const total = currentFullData.length;
@@ -166,15 +215,29 @@ export default function ResultsPage() {
             ))}</tbody></table>
         );
         return (
-            <table className="w-full"><thead><tr className="border-b bg-slate-50/50"><th className={thCls}>Year</th><th className={thCls}>Booth</th><th className={thCls}>MLA</th><th className={thCls}>Party</th><th className={thCls}>Votes</th><th className={thCls + ' !text-right'}>Actions</th></tr></thead>
+            <table className="w-full"><thead><tr className="border-b bg-slate-50/50"><th className={thCls}>Year</th><th className={thCls}>Booth</th><th className={thCls}>MLA Votes</th><th className={thCls + ' !text-right'}>Actions</th></tr></thead>
             <tbody>{rows.map((r: any) => (
                 <tr key={r.id} className="border-b hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 font-mono font-bold text-brand-600">{r.election_year}</td>
                     <td className="px-6 py-4"><div><span className="font-bold text-slate-800">{r.booth_name}</span><span className="block text-[10px] text-slate-400 font-bold">{r.constituency_name}</span></div></td>
-                    <td className="px-6 py-4 font-bold text-slate-800">{r.mla_name}</td>
-                    <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase text-white" style={{ backgroundColor: r.party_color || '#64748b' }}>{r.party_abbreviation}</span></td>
-                    <td className="px-6 py-4"><span className="font-black text-emerald-600 text-lg">{r.votes_gained?.toLocaleString()}</span></td>
-                    <td className="px-6 py-4 text-right"><button onClick={() => openModal('results', r)} className="mr-2 p-2 rounded-lg hover:bg-brand-50 text-brand-600"><HiOutlinePencil /></button><button onClick={() => { setDeletingId(r.id); setDeletingType('results'); }} className="p-2 rounded-lg hover:bg-rose-50 text-rose-600"><HiOutlineTrash /></button></td>
+                    <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-2">
+                            {r.results.map((mr: any) => (
+                                <div key={mr.mla_id} className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                                    <span className="px-2 py-1 text-[10px] font-black uppercase text-white" style={{ backgroundColor: mr.party_color || '#64748b' }}>
+                                        {mr.party_abbreviation || mr.mla_name.split(' ')[0]}
+                                    </span>
+                                    <span className="px-2 py-1 text-xs font-bold text-slate-700">
+                                        {mr.mla_name}: <span className="text-emerald-600">{mr.votes_gained?.toLocaleString()}</span>
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                        <button onClick={() => openModal('results', r)} className="mr-2 p-2 rounded-lg hover:bg-brand-50 text-brand-600"><HiOutlinePencil /></button>
+                        <button onClick={() => { setDeletingId(r); setDeletingType('results'); }} className="p-2 rounded-lg hover:bg-rose-50 text-rose-600"><HiOutlineTrash /></button>
+                    </td>
                 </tr>
             ))}</tbody></table>
         );
@@ -305,8 +368,37 @@ export default function ResultsPage() {
                                         placeholder="Select Booth"
                                     />
                                 </div>
-                                <div className="space-y-1.5"><label className={labelCls}>Select MLA</label><select required value={editItem.mla_id} onChange={e => setEditItem({...editItem, mla_id: e.target.value})} className={inputCls + ' cursor-pointer'}><option value="">Select MLA</option>{mlas.map(m => <option key={m.id} value={m.id}>{m.name} ({m.party_abbreviation || ''})</option>)}</select></div>
-                                <div className="space-y-1.5"><label className={labelCls}>Total Votes Gained</label><input type="number" required min="0" value={editItem.votes_gained} onChange={e => setEditItem({...editItem, votes_gained: e.target.value})} className={inputCls} placeholder="0" /></div>
+                                <div className="space-y-3 pt-2">
+                                    <label className={labelCls}>MLA Votes</label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {mlas.map(m => {
+                                            const rIdx = editItem.results?.findIndex((r: any) => r.mla_id === m.id) ?? -1;
+                                            const rVal = rIdx >= 0 ? editItem.results[rIdx].votes_gained : 0;
+                                            return (
+                                                <div key={m.id} className="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-sm font-bold text-slate-800 truncate">{m.name}</div>
+                                                        <div className="text-[10px] font-black uppercase text-slate-500">{m.party_abbreviation || 'Unknown'}</div>
+                                                    </div>
+                                                    <input 
+                                                        type="number" 
+                                                        min="0" 
+                                                        value={rVal || ''} 
+                                                        onChange={e => {
+                                                            const val = parseInt(e.target.value) || 0;
+                                                            const newRes = [...(editItem.results || [])];
+                                                            if (rIdx >= 0) newRes[rIdx].votes_gained = val;
+                                                            else newRes.push({ mla_id: m.id, votes_gained: val });
+                                                            setEditItem({...editItem, results: newRes});
+                                                        }} 
+                                                        className="w-24 px-3 py-2 rounded-lg border border-slate-200 focus:border-brand-500 outline-none text-right font-mono font-bold" 
+                                                        placeholder="0" 
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </>)}
                             <div className="flex gap-4 justify-end pt-8 border-t border-slate-100">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-4 font-black bg-slate-100 text-slate-500 rounded-2xl hover:bg-slate-200 transition-colors uppercase text-xs tracking-widest">Cancel</button>
