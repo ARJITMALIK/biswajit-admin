@@ -296,7 +296,15 @@ export default function ResultsPage() {
                             </>)}
                             {modalType === 'results' && (<>
                                 <div className="space-y-1.5"><label className={labelCls}>Election Year</label><input type="number" required value={editItem.election_year} onChange={e => setEditItem({...editItem, election_year: e.target.value})} className={inputCls} placeholder="e.g. 2026" /></div>
-                                <div className="space-y-1.5"><label className={labelCls}>Select Booth</label><select required value={editItem.booth_id} onChange={e => setEditItem({...editItem, booth_id: e.target.value})} className={inputCls + ' cursor-pointer'}><option value="">Select Booth</option>{booths.map((b: any) => <option key={b.id} value={b.id}>{b.name} (#{b.booth_no})</option>)}</select></div>
+                                <div className="space-y-1.5">
+                                    <label className={labelCls}>Select Booth</label>
+                                    <SearchableSelect
+                                        options={booths.map((b: any) => ({ id: b.id, label: `${b.name} (#${b.booth_no})` }))}
+                                        value={editItem.booth_id}
+                                        onChange={(val) => setEditItem({ ...editItem, booth_id: val })}
+                                        placeholder="Select Booth"
+                                    />
+                                </div>
                                 <div className="space-y-1.5"><label className={labelCls}>Select MLA</label><select required value={editItem.mla_id} onChange={e => setEditItem({...editItem, mla_id: e.target.value})} className={inputCls + ' cursor-pointer'}><option value="">Select MLA</option>{mlas.map(m => <option key={m.id} value={m.id}>{m.name} ({m.party_abbreviation || ''})</option>)}</select></div>
                                 <div className="space-y-1.5"><label className={labelCls}>Total Votes Gained</label><input type="number" required min="0" value={editItem.votes_gained} onChange={e => setEditItem({...editItem, votes_gained: e.target.value})} className={inputCls} placeholder="0" /></div>
                             </>)}
