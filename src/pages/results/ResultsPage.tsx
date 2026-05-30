@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { HiOutlineFlag, HiOutlineUserGroup, HiOutlineMapPin, HiOutlineTrophy, HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiMagnifyingGlass, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi2';
+import { useOutletContext } from 'react-router-dom';
+import { HiOutlineFlag, HiOutlineUserGroup, HiOutlineMapPin, HiOutlineTrophy, HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiMagnifyingGlass, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineArrowsRightLeft } from 'react-icons/hi2';
 import { resultsApi } from '../../api/results';
 import { PoliticalParty, Mla, ElectionResult, Constituency } from '../../types';
 import FileUpload from '../../components/ui/FileUpload';
@@ -29,6 +30,34 @@ export default function ResultsPage() {
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
+
+    // Map View States
+    const [selectedMlaId, setSelectedMlaId] = useState<string>('');
+    const [compareMlaId, setCompareMlaId] = useState<string>('');
+    const [filterType, setFilterType] = useState<'all' | 'max' | 'least' | 'compare_max' | 'compare_least'>('all');
+    const [isCompareMode, setIsCompareMode] = useState(false);
+
+    const outletCtx = useOutletContext<{ setCollapsed?: (val: boolean) => void } | null>();
+    const setCollapsed = outletCtx?.setCollapsed;
+
+    useEffect(() => {
+        if (setCollapsed) {
+            if (activeTab === 'map') {
+                setCollapsed(true);
+            } else {
+                setCollapsed(false);
+            }
+        }
+    }, [activeTab, setCollapsed]);
+
+    // Restore sidebar on unmount
+    useEffect(() => {
+        return () => {
+            if (setCollapsed) {
+                setCollapsed(false);
+            }
+        };
+    }, [setCollapsed]);
 
     useEffect(() => { loadData(); }, [activeTab]);
     useEffect(() => { setPage(1); }, [activeTab, search, perPage]);
@@ -170,11 +199,23 @@ export default function ResultsPage() {
     const totalPages = Math.max(1, Math.ceil(total / perPage));
     const paginatedData = currentFullData.slice((page - 1) * perPage, page * perPage);
 
-    const thCls = "text-left px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest";
-
     const renderTable = () => {
+        const thCls = "text-left px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest";
         if (loading) return <div className="p-6"><LoadingSkeleton rows={5} /></div>;
-        if (activeTab === 'map') return <ResultsMap results={results} mlas={mlas} />;
+        if (activeTab === 'map') return (
+            <ResultsMap 
+                results={results} 
+                mlas={mlas} 
+                selectedMlaId={selectedMlaId}
+                setSelectedMlaId={setSelectedMlaId}
+                compareMlaId={compareMlaId}
+                setCompareMlaId={setCompareMlaId}
+                filterType={filterType}
+                setFilterType={setFilterType}
+                isCompareMode={isCompareMode}
+                setIsCompareMode={setIsCompareMode}
+            />
+        );
 
         const rows = paginatedData as any[];
         if (rows.length === 0) return <div className="p-16 text-center"><p className="text-sm font-bold text-slate-400">No records found</p></div>;
@@ -247,24 +288,96 @@ export default function ResultsPage() {
     const labelCls = "text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1";
 
     return (
-        <div className="space-y-4 animate-in fade-in duration-500 pb-12">
-            <div className="flex items-center justify-between bg-white p-5 md:p-6 rounded-3xl border border-slate-100 shadow-sm">
-                <div>
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Election <span className="text-brand-600">Results</span></h1>
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mt-1 italic">Parties · MLAs · Booths · Vote Tracking</p>
-                </div>
-                <button onClick={() => openModal(activeTab)} className="flex items-center gap-2 px-6 py-3.5 rounded-2xl gradient-primary text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-brand-500/30 active:scale-95 transition-all">
-                    <HiOutlinePlus className="w-4 h-4" /> Add {activeTab === 'parties' ? 'Party' : activeTab === 'mlas' ? 'MLA' : activeTab === 'booths' ? 'Booth' : 'Result'}
-                </button>
-            </div>
+        <div className={`${activeTab === 'map' ? 'space-y-2' : 'space-y-4'} animate-in fade-in duration-500 pb-12`}>
+            {activeTab === 'map' ? (
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <h1 className="text-sm font-black text-slate-800 tracking-tight uppercase leading-none">Election <span className="text-brand-600">Results</span></h1>
+                        <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+                        <div className="flex bg-slate-100/80 p-0.5 rounded-lg w-fit border border-slate-200/50 shadow-sm">
+                            {tabs.map(t => (
+                                <button key={t.key} onClick={() => setActiveTab(t.key)} className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all whitespace-nowrap ${activeTab === t.key ? 'bg-white text-brand-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}>
+                                    <t.icon className="w-3 h-3" /> {t.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-            <div className="flex bg-slate-100/80 p-1.5 rounded-2xl w-fit border border-slate-200/60 shadow-sm">
-                {tabs.map(t => (
-                    <button key={t.key} onClick={() => setActiveTab(t.key)} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === t.key ? 'bg-white text-brand-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
-                        <t.icon className="w-4 h-4" /> {t.label}
-                    </button>
-                ))}
-            </div>
+                    <div className="flex flex-wrap items-center gap-2 flex-1 lg:justify-end">
+                        {/* Primary MLA Selection */}
+                        <div className="min-w-[160px] max-w-[200px] flex-1">
+                            <SearchableSelect
+                                options={mlas.map(m => ({ id: m.id, label: `${m.name} (${m.party_abbreviation || 'No Party'})` }))}
+                                value={selectedMlaId}
+                                onChange={setSelectedMlaId}
+                                placeholder="Select Primary MLA"
+                                size="sm"
+                            />
+                        </div>
+
+                        {/* Compared MLA Selection */}
+                        {isCompareMode && (
+                            <div className="min-w-[160px] max-w-[200px] flex-1 animate-in fade-in slide-in-from-left-2 duration-300">
+                                <SearchableSelect
+                                    options={mlas.filter(m => m.id !== selectedMlaId).map(m => ({ id: m.id, label: `${m.name} (${m.party_abbreviation || 'No Party'})` }))}
+                                    value={compareMlaId}
+                                    onChange={setCompareMlaId}
+                                    placeholder="Select Compared MLA"
+                                    size="sm"
+                                />
+                            </div>
+                        )}
+
+                        {/* Filter and Compare Mode Toggles */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <div className="flex bg-slate-100 p-0.5 rounded-lg">
+                                {!isCompareMode ? (
+                                    <>
+                                        <button onClick={() => setFilterType('all')} className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${filterType === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>All (Heatmap)</button>
+                                        <button onClick={() => setFilterType('max')} className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${filterType === 'max' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Max Vote</button>
+                                        <button onClick={() => setFilterType('least')} className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${filterType === 'least' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Least Vote</button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button onClick={() => setFilterType('compare_max')} className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${filterType === 'compare_max' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Compare Max</button>
+                                        <button onClick={() => setFilterType('compare_least')} className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${filterType === 'compare_least' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Compare Least</button>
+                                    </>
+                                )}
+                            </div>
+
+                            <button 
+                                onClick={() => { 
+                                    setIsCompareMode(!isCompareMode); 
+                                    setFilterType(isCompareMode ? 'all' : 'compare_max'); 
+                                }} 
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1 h-[24px] ${isCompareMode ? 'bg-brand-600 text-white shadow-sm' : 'text-brand-600 hover:bg-brand-50 border border-brand-200'}`}
+                            >
+                                <HiOutlineArrowsRightLeft className="w-2.5 h-2.5"/> Compare Mode
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <div className="flex items-center justify-between bg-white p-5 md:p-6 rounded-3xl border border-slate-100 shadow-sm">
+                        <div>
+                            <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Election <span className="text-brand-600">Results</span></h1>
+                            <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mt-1 italic">Parties · MLAs · Booths · Vote Tracking</p>
+                        </div>
+                        <button onClick={() => openModal(activeTab)} className="flex items-center gap-2 px-6 py-3.5 rounded-2xl gradient-primary text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-brand-500/30 active:scale-95 transition-all">
+                            <HiOutlinePlus className="w-4 h-4" /> Add {activeTab === 'parties' ? 'Party' : activeTab === 'mlas' ? 'MLA' : activeTab === 'booths' ? 'Booth' : 'Result'}
+                        </button>
+                    </div>
+
+                    <div className="flex bg-slate-100/80 p-1.5 rounded-2xl w-fit border border-slate-200/60 shadow-sm">
+                        {tabs.map(t => (
+                            <button key={t.key} onClick={() => setActiveTab(t.key)} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === t.key ? 'bg-white text-brand-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}>
+                                <t.icon className="w-4 h-4" /> {t.label}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
 
             {/* Search bar */}
             {activeTab !== 'map' && (
@@ -283,46 +396,44 @@ export default function ResultsPage() {
                 </div>
             )}
 
-            <div className={`bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 ${activeTab === 'map' ? '' : 'overflow-hidden min-h-[400px]'}`}>
-                {activeTab === 'map' ? (
-                    <div className="p-4">
-                        {renderTable()}
-                    </div>
-                ) : (
+            {activeTab === 'map' ? (
+                renderTable()
+            ) : (
+                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden min-h-[400px]">
                     <div className="overflow-x-auto">{renderTable()}</div>
-                )}
 
-                {/* Pagination Footer */}
-                {!loading && activeTab !== 'map' && total > 0 && (
-                    <div className="px-8 py-6 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-                        <div className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
-                            Showing <span className="text-slate-900">{(page - 1) * perPage + 1}</span> – <span className="text-slate-900">{Math.min(page * perPage, total)}</span> of <span className="text-slate-900">{total}</span> records
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2.5 rounded-xl border border-slate-200 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-all shadow-sm">
-                                <HiOutlineChevronLeft className="w-4 h-4" />
-                            </button>
-                            <div className="flex items-center gap-1 mx-2">
-                                {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                                    let pg: number;
-                                    if (totalPages <= 7) { pg = i + 1; }
-                                    else if (page <= 4) { pg = i + 1; }
-                                    else if (page >= totalPages - 3) { pg = totalPages - 6 + i; }
-                                    else { pg = page - 3 + i; }
-                                    return (
-                                        <button key={pg} onClick={() => setPage(pg)} className={`w-9 h-9 rounded-xl text-xs font-black transition-all ${page === pg ? 'gradient-primary text-white shadow-lg shadow-brand-500/30' : 'text-slate-500 hover:bg-white hover:text-slate-900'}`}>
-                                            {pg}
-                                        </button>
-                                    );
-                                })}
+                    {/* Pagination Footer */}
+                    {!loading && total > 0 && (
+                        <div className="px-8 py-6 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+                            <div className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                                Showing <span className="text-slate-900">{(page - 1) * perPage + 1}</span> – <span className="text-slate-900">{Math.min(page * perPage, total)}</span> of <span className="text-slate-900">{total}</span> records
                             </div>
-                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="p-2.5 rounded-xl border border-slate-200 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-all shadow-sm">
-                                <HiOutlineChevronRight className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2.5 rounded-xl border border-slate-200 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-all shadow-sm">
+                                    <HiOutlineChevronLeft className="w-4 h-4" />
+                                </button>
+                                <div className="flex items-center gap-1 mx-2">
+                                    {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                                        let pg: number;
+                                        if (totalPages <= 7) { pg = i + 1; }
+                                        else if (page <= 4) { pg = i + 1; }
+                                        else if (page >= totalPages - 3) { pg = totalPages - 6 + i; }
+                                        else { pg = page - 3 + i; }
+                                        return (
+                                            <button key={pg} onClick={() => setPage(pg)} className={`w-9 h-9 rounded-xl text-xs font-black transition-all ${page === pg ? 'gradient-primary text-white shadow-lg shadow-brand-500/30' : 'text-slate-500 hover:bg-white hover:text-slate-900'}`}>
+                                                {pg}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="p-2.5 rounded-xl border border-slate-200 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-all shadow-sm">
+                                    <HiOutlineChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
 
             <ConfirmDialog isOpen={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={handleDelete} loading={false} />
 

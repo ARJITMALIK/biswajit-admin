@@ -25,7 +25,7 @@ export default function AdminLayout() {
                                 ease: [0.22, 1, 0.36, 1]
                             }}
                         >
-                            <Outlet />
+                            <Outlet context={{ setCollapsed }} />
                         </motion.div>
                     </AnimatePresence>
                 </main>
